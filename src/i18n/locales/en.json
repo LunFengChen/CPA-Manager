@@ -113,6 +113,7 @@
     "submit_button": "Login",
     "submitting": "Connecting...",
     "error_title": "Login Failed",
+    "error_backend_detail": "Backend response",
     "error_required": "Please fill in complete connection information",
     "error_invalid": "Connection failed, please check address and key",
     "error_network": "Network connection failed, please check your network or server address",

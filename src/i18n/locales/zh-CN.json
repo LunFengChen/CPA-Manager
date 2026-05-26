@@ -113,6 +113,7 @@
     "submit_button": "登录",
     "submitting": "连接中...",
     "error_title": "登录失败",
+    "error_backend_detail": "后端返回",
     "error_required": "请填写完整的连接信息",
     "error_invalid": "连接失败，请检查地址和密钥",
     "error_network": "网络连接失败，请检查网络或服务器地址",

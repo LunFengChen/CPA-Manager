@@ -111,6 +111,7 @@
     "submit_button": "登入",
     "submitting": "連線中...",
     "error_title": "登入失敗",
+    "error_backend_detail": "後端返回",
     "error_required": "請填寫完整的連線資訊",
     "error_invalid": "連線失敗，請檢查位址和金鑰",
     "error_network": "網路連線失敗，請檢查網路或伺服器位址",
