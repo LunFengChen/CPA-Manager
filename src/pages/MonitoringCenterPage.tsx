@@ -468,14 +468,20 @@ const buildApiKeySummaryMetrics = (
   },
 ];
 
-const buildRealtimeLogRows = (rows: MonitoringEventRow[]): RealtimeLogRow[] => {
+export const buildRealtimeLogRows = (rows: MonitoringEventRow[]): RealtimeLogRow[] => {
   const sortedAsc = [...rows].sort(
     (left, right) => left.timestampMs - right.timestampMs || left.id.localeCompare(right.id)
   );
   const metricsByStream = new Map<string, { total: number; success: number; pattern: boolean[] }>();
 
   const enriched = sortedAsc.map((row) => {
-    const streamKey = [row.account, row.provider, row.model, row.channel].join('::');
+    const fallbackStreamKey = [row.account, row.provider, row.model, row.channel].join('::');
+    const serverTotal = row.serverStreamTotalCalls;
+    const hasServerAggregate = typeof serverTotal === 'number' && serverTotal > 0;
+    const streamKey =
+      hasServerAggregate && row.serverStreamKey
+        ? `server:${row.serverStreamKey}`
+        : fallbackStreamKey;
     const previous = metricsByStream.get(streamKey) ?? { total: 0, success: 0, pattern: [] };
     const nextPattern = [...previous.pattern, !row.failed].slice(-10);
     const next = {
@@ -484,13 +490,22 @@ const buildRealtimeLogRows = (rows: MonitoringEventRow[]): RealtimeLogRow[] => {
       pattern: nextPattern,
     };
     metricsByStream.set(streamKey, next);
+    const serverSuccess = row.serverStreamSuccessCalls;
+    const serverPattern = row.serverStreamRecentPattern;
 
     return {
       ...row,
       streamKey,
-      requestCount: next.total,
-      successRate: next.total > 0 ? next.success / next.total : 1,
-      recentPattern: nextPattern,
+      requestCount: hasServerAggregate ? serverTotal : next.total,
+      successRate: hasServerAggregate
+        ? Math.max(serverSuccess ?? 0, 0) / serverTotal
+        : next.total > 0
+          ? next.success / next.total
+          : 1,
+      recentPattern:
+        hasServerAggregate && Array.isArray(serverPattern) && serverPattern.length > 0
+          ? serverPattern
+          : nextPattern,
     } satisfies RealtimeLogRow;
   });
 
@@ -2595,7 +2610,7 @@ export function MonitoringCenterPage() {
     {
       label: t('monitoring.total_calls'),
       value: formatCompactNumber(scopedSummary.totalCalls),
-      meta: `${accountRows.length} ${t('monitoring.accounts_suffix')}`,
+      meta: `${accountTotalCount} ${t('monitoring.accounts_suffix')}`,
     },
     {
       label: t('monitoring.call_success_rate'),

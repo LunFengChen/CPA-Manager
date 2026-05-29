@@ -1,9 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
-import { AccountExpandedDetails, AccountOverviewCard } from './MonitoringCenterPage';
+import {
+  AccountExpandedDetails,
+  AccountOverviewCard,
+  buildRealtimeLogRows,
+} from './MonitoringCenterPage';
 import { buildEmptyMonitoringStatusData } from '@/features/monitoring/accountOverviewState';
 import { buildRealtimeSourceDisplay } from '@/features/monitoring/realtimeSourceDisplay';
+import type { MonitoringEventRow } from '@/features/monitoring/hooks/useMonitoringData';
 
 const t = ((key: string, options?: Record<string, unknown>) => {
   const copy: Record<string, string> = {
@@ -67,7 +72,97 @@ const t = ((key: string, options?: Record<string, unknown>) => {
   return value;
 }) as TFunction;
 
+const createMonitoringEventRow = (
+  overrides: Partial<MonitoringEventRow> = {}
+): MonitoringEventRow => ({
+  id: overrides.id ?? 'row-1',
+  timestamp: overrides.timestamp ?? '2026-05-09T01:12:43.000Z',
+  timestampMs: overrides.timestampMs ?? Date.parse('2026-05-09T01:12:43.000Z'),
+  dayKey: overrides.dayKey ?? '2026-05-09',
+  hourLabel: overrides.hourLabel ?? '01:00',
+  model: overrides.model ?? 'gpt-4.1',
+  endpoint: overrides.endpoint ?? 'POST /v1/chat/completions',
+  endpointMethod: overrides.endpointMethod ?? 'POST',
+  endpointPath: overrides.endpointPath ?? '/v1/chat/completions',
+  sourceKey: overrides.sourceKey ?? 'source:alpha',
+  source: overrides.source ?? 'alpha.json',
+  sourceMasked: overrides.sourceMasked ?? 'alpha.json',
+  account: overrides.account ?? 'alice@example.com',
+  accountMasked: overrides.accountMasked ?? 'ali***@example.com',
+  authIndex: overrides.authIndex ?? 'auth-1',
+  authIndexMasked: overrides.authIndexMasked ?? 'auth-1',
+  authLabel: overrides.authLabel ?? 'alice',
+  apiKeyHash: overrides.apiKeyHash ?? '',
+  apiKeyLabel: overrides.apiKeyLabel ?? '',
+  apiKeyMasked: overrides.apiKeyMasked ?? '',
+  provider: overrides.provider ?? 'codex',
+  projectId: overrides.projectId ?? '',
+  planType: overrides.planType ?? '-',
+  channel: overrides.channel ?? 'codex',
+  channelHost: overrides.channelHost ?? 'example.com',
+  channelDisabled: overrides.channelDisabled ?? false,
+  failed: overrides.failed ?? false,
+  requestCount: overrides.requestCount ?? 1,
+  successCalls: overrides.successCalls ?? (overrides.failed ? 0 : 1),
+  failureCalls: overrides.failureCalls ?? (overrides.failed ? 1 : 0),
+  statsIncluded: overrides.statsIncluded ?? true,
+  latencyMs: overrides.latencyMs ?? 120,
+  latencySumMs: overrides.latencySumMs ?? overrides.latencyMs ?? 120,
+  latencyCount: overrides.latencyCount ?? 1,
+  inputTokens: overrides.inputTokens ?? 10,
+  outputTokens: overrides.outputTokens ?? 5,
+  reasoningTokens: overrides.reasoningTokens ?? 0,
+  cachedTokens: overrides.cachedTokens ?? 0,
+  totalTokens: overrides.totalTokens ?? 15,
+  totalCost: overrides.totalCost ?? 0,
+  serverStreamKey: overrides.serverStreamKey,
+  serverStreamTotalCalls: overrides.serverStreamTotalCalls,
+  serverStreamSuccessCalls: overrides.serverStreamSuccessCalls,
+  serverStreamFailureCalls: overrides.serverStreamFailureCalls,
+  serverStreamRecentPattern: overrides.serverStreamRecentPattern,
+  taskKey: overrides.taskKey ?? 'task-1',
+  searchText: overrides.searchText ?? 'alice codex gpt-4.1',
+});
+
 describe('MonitoringCenterPage account card', () => {
+  it('uses server realtime stream aggregates when page items are paginated', () => {
+    const rows = buildRealtimeLogRows([
+      createMonitoringEventRow({
+        serverStreamKey: 'alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1',
+        serverStreamTotalCalls: 37,
+        serverStreamSuccessCalls: 35,
+        serverStreamFailureCalls: 2,
+        serverStreamRecentPattern: [true, true, false],
+      }),
+      createMonitoringEventRow({
+        id: 'row-2',
+        timestampMs: Date.parse('2026-05-09T01:12:44.000Z'),
+        serverStreamKey: 'alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-2',
+        serverStreamTotalCalls: 1,
+        serverStreamSuccessCalls: 0,
+        serverStreamFailureCalls: 1,
+        serverStreamRecentPattern: [false],
+        failed: true,
+      }),
+    ]);
+
+    expect(rows).toHaveLength(2);
+    const rowsByStreamKey = new Map(rows.map((row) => [row.streamKey, row]));
+    const authOneRow = rowsByStreamKey.get(
+      'server:alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1'
+    );
+    const authTwoRow = rowsByStreamKey.get(
+      'server:alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-2'
+    );
+
+    expect(authOneRow?.requestCount).toBe(37);
+    expect(authOneRow?.successRate).toBeCloseTo(35 / 37);
+    expect(authOneRow?.recentPattern).toEqual([true, true, false]);
+    expect(authTwoRow?.requestCount).toBe(1);
+    expect(authTwoRow?.successRate).toBe(0);
+    expect(authTwoRow?.recentPattern).toEqual([false]);
+  });
+
   it('prefers readable channel names in realtime source cells', () => {
     const display = buildRealtimeSourceDisplay(
       {

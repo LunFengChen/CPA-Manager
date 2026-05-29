@@ -443,6 +443,11 @@ export type MonitoringEventRow = {
   cachedTokens: number;
   totalTokens: number;
   totalCost: number;
+  serverStreamKey?: string;
+  serverStreamTotalCalls?: number;
+  serverStreamSuccessCalls?: number;
+  serverStreamFailureCalls?: number;
+  serverStreamRecentPattern?: boolean[];
   taskKey: string;
   searchText: string;
 };
@@ -1835,6 +1840,13 @@ const buildEventRows = (
             : 0;
       const totalCost = calculateCost(detail, modelPriceIndex);
       const statsIncluded = detail.failed === true || inputTokens > 0 || outputTokens > 0;
+      const serverStreamKey = readString(detail.__streamKey);
+      const serverStreamTotalCalls = Math.max(Number(detail.__streamTotalRequests) || 0, 0);
+      const serverStreamSuccessCalls = Math.max(Number(detail.__streamSuccessCount) || 0, 0);
+      const serverStreamFailureCalls = Math.max(Number(detail.__streamFailureCount) || 0, 0);
+      const serverStreamRecentPattern = Array.isArray(detail.__streamRecentPattern)
+        ? detail.__streamRecentPattern.map((value) => value === true).slice(-10)
+        : undefined;
       const dayKey = buildLocalDayKey(timestampMs);
       const hourLabel = buildHourLabel(timestampMs);
       const sourceKey = sourceMeta.identityKey || `source:${sourceLabel}`;
@@ -1883,6 +1895,13 @@ const buildEventRows = (
         cachedTokens,
         totalTokens,
         totalCost,
+        serverStreamKey: serverStreamTotalCalls > 0 ? serverStreamKey || undefined : undefined,
+        serverStreamTotalCalls: serverStreamTotalCalls > 0 ? serverStreamTotalCalls : undefined,
+        serverStreamSuccessCalls:
+          serverStreamTotalCalls > 0 ? serverStreamSuccessCalls : undefined,
+        serverStreamFailureCalls:
+          serverStreamTotalCalls > 0 ? serverStreamFailureCalls : undefined,
+        serverStreamRecentPattern,
         taskKey,
         searchText: buildSearchText(
           detail.__modelName,
@@ -2049,6 +2068,10 @@ const buildRealtimeRowsFromPageItems = (
   const details = items.map((item) => {
     const endpoint = readString(item.endpoint) || '-';
     const endpointMatch = endpoint.match(/^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)/i);
+    const rawStreamRecentPattern = item.stream_recent_pattern ?? item.streamRecentPattern;
+    const streamRecentPattern = Array.isArray(rawStreamRecentPattern)
+      ? rawStreamRecentPattern
+      : undefined;
     return {
       timestamp: readString(item.timestamp),
       source: readString(item.source),
@@ -2078,6 +2101,15 @@ const buildRealtimeRowsFromPageItems = (
       request_count: 1,
       success_count: item.failed === true ? 0 : 1,
       failure_count: item.failed === true ? 1 : 0,
+      __streamKey: readString(item.stream_key ?? item.streamKey),
+      __streamTotalRequests: readPageNumber(
+        item,
+        'stream_total_requests',
+        'streamTotalRequests'
+      ),
+      __streamSuccessCount: readPageNumber(item, 'stream_success_count', 'streamSuccessCount'),
+      __streamFailureCount: readPageNumber(item, 'stream_failure_count', 'streamFailureCount'),
+      __streamRecentPattern: streamRecentPattern,
       __modelName: readString(item.model) || '-',
       __resolvedModel: readString(item.resolved_model ?? item.resolvedModel),
       __endpoint: endpoint,
