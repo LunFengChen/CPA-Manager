@@ -719,6 +719,35 @@ func TestStoreUsageBreakdownPagePaginatesRealtimeRows(t *testing.T) {
 	if len(items[0].StreamRecentPattern) != 2 || !items[0].StreamRecentPattern[0] || items[0].StreamRecentPattern[1] {
 		t.Fatalf("stream recent pattern = %#v, want [true false]", items[0].StreamRecentPattern)
 	}
+	if items[0].StreamRequestCount != 1 || items[0].StreamSuccessCountToEvent != 1 || items[0].StreamFailureCountToEvent != 0 {
+		t.Fatalf("stream event metrics = %#v, want oldest event to be first successful request", items[0])
+	}
+	if len(items[0].StreamRecentPatternToEvent) != 1 || !items[0].StreamRecentPatternToEvent[0] {
+		t.Fatalf("stream event recent pattern = %#v, want [true]", items[0].StreamRecentPatternToEvent)
+	}
+
+	firstPage, err := db.UsageBreakdownPage(context.Background(), UsageBreakdownRealtime, UsageSummaryFilter{
+		Model: "gpt-test",
+	}, UsagePageFilter{
+		Page:     1,
+		PageSize: 2,
+	})
+	if err != nil {
+		t.Fatalf("usage realtime first page: %v", err)
+	}
+	firstItems, ok := firstPage.Items.([]UsageRealtimePageItem)
+	if !ok || len(firstItems) != 2 || firstItems[0].EventHash != "realtime-page-new" || firstItems[1].EventHash != "realtime-page-old" {
+		t.Fatalf("realtime first page items = %#v, want newest then oldest events", firstPage.Items)
+	}
+	if firstItems[0].StreamTotalRequests != 2 || firstItems[0].StreamRequestCount != 2 || firstItems[1].StreamRequestCount != 1 {
+		t.Fatalf("stream per-event counts = %#v, want final total with per-row positions 2 and 1", firstItems)
+	}
+	if firstItems[0].StreamSuccessCountToEvent != 1 || firstItems[0].StreamFailureCountToEvent != 1 {
+		t.Fatalf("newest stream event metrics = %#v, want one success and one failure through event", firstItems[0])
+	}
+	if len(firstItems[0].StreamRecentPatternToEvent) != 2 || !firstItems[0].StreamRecentPatternToEvent[0] || firstItems[0].StreamRecentPatternToEvent[1] {
+		t.Fatalf("newest stream event recent pattern = %#v, want [true false]", firstItems[0].StreamRecentPatternToEvent)
+	}
 }
 
 func TestStoreUsageBreakdownPageSplitsRealtimeStreamsByAuthIndex(t *testing.T) {
@@ -780,14 +809,23 @@ func TestStoreUsageBreakdownPageSplitsRealtimeStreamsByAuthIndex(t *testing.T) {
 		if item.StreamTotalRequests != 1 {
 			t.Fatalf("stream totals = %#v, want isolated per-auth-index total", item)
 		}
+		if item.StreamRequestCount != 1 {
+			t.Fatalf("stream event count = %#v, want isolated per-auth-index event count", item)
+		}
 		switch item.AuthIndex {
 		case "auth-a":
 			if item.StreamSuccessCount != 1 || item.StreamFailureCount != 0 {
 				t.Fatalf("auth-a stream aggregate = %#v, want one success", item)
 			}
+			if item.StreamSuccessCountToEvent != 1 || item.StreamFailureCountToEvent != 0 {
+				t.Fatalf("auth-a stream event metric = %#v, want one success", item)
+			}
 		case "auth-b":
 			if item.StreamSuccessCount != 0 || item.StreamFailureCount != 1 {
 				t.Fatalf("auth-b stream aggregate = %#v, want one failure", item)
+			}
+			if item.StreamSuccessCountToEvent != 0 || item.StreamFailureCountToEvent != 1 {
+				t.Fatalf("auth-b stream event metric = %#v, want one failure", item)
 			}
 		default:
 			t.Fatalf("unexpected auth index in realtime item: %#v", item)

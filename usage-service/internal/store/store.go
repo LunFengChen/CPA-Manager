@@ -988,11 +988,15 @@ type UsageBreakdownPageItem struct {
 
 type UsageRealtimePageItem struct {
 	usage.Event
-	StreamKey           string `json:"stream_key,omitempty"`
-	StreamTotalRequests int64  `json:"stream_total_requests"`
-	StreamSuccessCount  int64  `json:"stream_success_count"`
-	StreamFailureCount  int64  `json:"stream_failure_count"`
-	StreamRecentPattern []bool `json:"stream_recent_pattern,omitempty"`
+	StreamKey                  string `json:"stream_key,omitempty"`
+	StreamTotalRequests        int64  `json:"stream_total_requests"`
+	StreamSuccessCount         int64  `json:"stream_success_count"`
+	StreamFailureCount         int64  `json:"stream_failure_count"`
+	StreamRecentPattern        []bool `json:"stream_recent_pattern,omitempty"`
+	StreamRequestCount         int64  `json:"stream_request_count"`
+	StreamSuccessCountToEvent  int64  `json:"stream_success_count_to_event"`
+	StreamFailureCountToEvent  int64  `json:"stream_failure_count_to_event"`
+	StreamRecentPatternToEvent []bool `json:"stream_recent_pattern_to_event,omitempty"`
 }
 
 type UsageBreakdownModelItem struct {
@@ -1535,12 +1539,16 @@ func (s *Store) usageRealtimePage(ctx context.Context, filter UsageSummaryFilter
 	if err != nil {
 		return UsagePage{}, err
 	}
+	streamEventMetrics, err := s.usageRealtimeStreamEventMetrics(ctx, whereClause, args, events)
+	if err != nil {
+		return UsagePage{}, err
+	}
 	return UsagePage{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalItems: totalItems,
 		Usage:      summary,
-		Items:      buildUsageRealtimePageItems(events, streamAggregates),
+		Items:      buildUsageRealtimePageItems(events, streamAggregates, streamEventMetrics),
 	}, nil
 }
 
@@ -2083,6 +2091,13 @@ type usageRealtimeStreamAggregate struct {
 	RecentPattern []bool
 }
 
+type usageRealtimeStreamEventMetric struct {
+	RequestCount  int64
+	SuccessCount  int64
+	FailureCount  int64
+	RecentPattern []bool
+}
+
 const (
 	usageRealtimeStreamAccountExpr  = `coalesce(nullif(account_snapshot, ''), nullif(auth_label_snapshot, ''), nullif(source, ''), nullif(auth_index, ''), '-')`
 	usageRealtimeStreamProviderExpr = `coalesce(nullif(auth_provider_snapshot, ''), nullif(provider, ''), '-')`
@@ -2180,18 +2195,136 @@ func (s *Store) usageRealtimeStreamAggregates(ctx context.Context, whereClause s
 	return aggregates, nil
 }
 
-func buildUsageRealtimePageItems(events []usage.Event, aggregates map[string]usageRealtimeStreamAggregate) []UsageRealtimePageItem {
+func (s *Store) usageRealtimeStreamEventMetrics(ctx context.Context, whereClause string, args []any, events []usage.Event) (map[string]usageRealtimeStreamEventMetric, error) {
+	if len(events) == 0 {
+		return map[string]usageRealtimeStreamEventMetric{}, nil
+	}
+
+	hashes := make([]any, 0, len(events))
+	placeholders := make([]string, 0, len(events))
+	for _, event := range events {
+		hashes = append(hashes, event.EventHash)
+		placeholders = append(placeholders, "?")
+	}
+
+	queryArgs := make([]any, 0, len(args)+len(hashes))
+	queryArgs = append(queryArgs, args...)
+	queryArgs = append(queryArgs, hashes...)
+	rows, err := s.db.QueryContext(ctx, `with ranked as (
+		select
+			event_hash,
+			`+usageRealtimeStreamAccountExpr+` as stream_account,
+			`+usageRealtimeStreamProviderExpr+` as stream_provider,
+			`+usageRealtimeStreamModelExpr+` as stream_model,
+			`+usageRealtimeStreamChannelExpr+` as stream_channel,
+			failed,
+			timestamp_ms,
+			id,
+			row_number() over (
+				partition by
+					`+usageRealtimeStreamAccountExpr+`,
+					`+usageRealtimeStreamProviderExpr+`,
+					`+usageRealtimeStreamModelExpr+`,
+					`+usageRealtimeStreamChannelExpr+`
+				order by timestamp_ms asc, id asc
+			) as stream_rank,
+			count(*) over (
+				partition by
+					`+usageRealtimeStreamAccountExpr+`,
+					`+usageRealtimeStreamProviderExpr+`,
+					`+usageRealtimeStreamModelExpr+`,
+					`+usageRealtimeStreamChannelExpr+`
+				order by timestamp_ms asc, id asc
+				rows between unbounded preceding and current row
+			) as stream_request_count,
+			coalesce(sum(case when failed = 0 then 1 else 0 end) over (
+				partition by
+					`+usageRealtimeStreamAccountExpr+`,
+					`+usageRealtimeStreamProviderExpr+`,
+					`+usageRealtimeStreamModelExpr+`,
+					`+usageRealtimeStreamChannelExpr+`
+				order by timestamp_ms asc, id asc
+				rows between unbounded preceding and current row
+			), 0) as stream_success_count,
+			coalesce(sum(case when failed != 0 then 1 else 0 end) over (
+				partition by
+					`+usageRealtimeStreamAccountExpr+`,
+					`+usageRealtimeStreamProviderExpr+`,
+					`+usageRealtimeStreamModelExpr+`,
+					`+usageRealtimeStreamChannelExpr+`
+				order by timestamp_ms asc, id asc
+				rows between unbounded preceding and current row
+			), 0) as stream_failure_count
+		from usage_events`+whereClause+`
+	),
+	page_events as (
+		select * from ranked where event_hash in (`+strings.Join(placeholders, ",")+`)
+	)
+	select
+		page_events.event_hash,
+		page_events.stream_request_count,
+		page_events.stream_success_count,
+		page_events.stream_failure_count,
+		history.failed
+	from page_events
+	join ranked history
+		on history.stream_account = page_events.stream_account
+		and history.stream_provider = page_events.stream_provider
+		and history.stream_model = page_events.stream_model
+		and history.stream_channel = page_events.stream_channel
+		and history.stream_rank between page_events.stream_rank - 9 and page_events.stream_rank
+	order by page_events.event_hash asc, history.stream_rank asc`, queryArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	metrics := map[string]usageRealtimeStreamEventMetric{}
+	for rows.Next() {
+		var eventHash string
+		var failed int
+		var metric usageRealtimeStreamEventMetric
+		if err := rows.Scan(
+			&eventHash,
+			&metric.RequestCount,
+			&metric.SuccessCount,
+			&metric.FailureCount,
+			&failed,
+		); err != nil {
+			return nil, err
+		}
+		existing := metrics[eventHash]
+		if existing.RequestCount == 0 {
+			existing.RequestCount = metric.RequestCount
+			existing.SuccessCount = metric.SuccessCount
+			existing.FailureCount = metric.FailureCount
+		}
+		existing.RecentPattern = append(existing.RecentPattern, failed == 0)
+		metrics[eventHash] = existing
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return metrics, nil
+}
+
+func buildUsageRealtimePageItems(events []usage.Event, aggregates map[string]usageRealtimeStreamAggregate, eventMetrics map[string]usageRealtimeStreamEventMetric) []UsageRealtimePageItem {
 	items := make([]UsageRealtimePageItem, 0, len(events))
 	for _, event := range events {
 		streamKey := usageRealtimeStreamKeyForEvent(event)
 		aggregate := aggregates[streamKey]
+		eventMetric := eventMetrics[event.EventHash]
 		items = append(items, UsageRealtimePageItem{
-			Event:               event,
-			StreamKey:           streamKey,
-			StreamTotalRequests: aggregate.TotalRequests,
-			StreamSuccessCount:  aggregate.SuccessCount,
-			StreamFailureCount:  aggregate.FailureCount,
-			StreamRecentPattern: aggregate.RecentPattern,
+			Event:                      event,
+			StreamKey:                  streamKey,
+			StreamTotalRequests:        aggregate.TotalRequests,
+			StreamSuccessCount:         aggregate.SuccessCount,
+			StreamFailureCount:         aggregate.FailureCount,
+			StreamRecentPattern:        aggregate.RecentPattern,
+			StreamRequestCount:         eventMetric.RequestCount,
+			StreamSuccessCountToEvent:  eventMetric.SuccessCount,
+			StreamFailureCountToEvent:  eventMetric.FailureCount,
+			StreamRecentPatternToEvent: eventMetric.RecentPattern,
 		})
 	}
 	return items
