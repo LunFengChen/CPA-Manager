@@ -490,21 +490,26 @@ export const buildRealtimeLogRows = (rows: MonitoringEventRow[]): RealtimeLogRow
       pattern: nextPattern,
     };
     metricsByStream.set(streamKey, next);
-    const serverSuccess = row.serverStreamSuccessCalls;
-    const serverPattern = row.serverStreamRecentPattern;
+    const serverRequestCount = row.serverStreamRequestCount;
+    const serverSuccessToEvent = row.serverStreamSuccessCallsToEvent;
+    const serverPatternToEvent = row.serverStreamRecentPatternToEvent;
+    const hasServerEventMetrics =
+      typeof serverRequestCount === 'number' && serverRequestCount > 0;
 
     return {
       ...row,
       streamKey,
-      requestCount: hasServerAggregate ? serverTotal : next.total,
-      successRate: hasServerAggregate
-        ? Math.max(serverSuccess ?? 0, 0) / serverTotal
+      requestCount: hasServerEventMetrics ? serverRequestCount : next.total,
+      successRate: hasServerEventMetrics
+        ? Math.max(serverSuccessToEvent ?? 0, 0) / serverRequestCount
         : next.total > 0
           ? next.success / next.total
           : 1,
       recentPattern:
-        hasServerAggregate && Array.isArray(serverPattern) && serverPattern.length > 0
-          ? serverPattern
+        hasServerEventMetrics &&
+        Array.isArray(serverPatternToEvent) &&
+        serverPatternToEvent.length > 0
+          ? serverPatternToEvent
           : nextPattern,
     } satisfies RealtimeLogRow;
   });
@@ -2492,13 +2497,26 @@ export function MonitoringCenterPage() {
 
   useEffect(() => {
     if (
-      !shouldClampAccountOverviewPage(overallLoading, accountPage, accountPagination.currentPage)
+      !shouldClampAccountOverviewPage(overallLoading, accountPage, accountPagination.currentPage, {
+        requestedPage: accountPage,
+        responsePage: usagePages?.accounts?.page ?? accountPage,
+        requestedPageSize: accountPageSize,
+        responsePageSize: usagePages?.accounts?.page_size ?? accountPageSize,
+      })
     ) {
       return;
     }
 
     setCurrentAccountPage(accountPagination.currentPage);
-  }, [accountPage, accountPagination.currentPage, overallLoading, setCurrentAccountPage]);
+  }, [
+    accountPage,
+    accountPageSize,
+    accountPagination.currentPage,
+    overallLoading,
+    setCurrentAccountPage,
+    usagePages?.accounts?.page,
+    usagePages?.accounts?.page_size,
+  ]);
 
   const accountQuotaTargetsByAccount = useMemo(
     () =>

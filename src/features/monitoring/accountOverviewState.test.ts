@@ -265,6 +265,30 @@ describe('accountOverviewState', () => {
     expect(shouldClampAccountOverviewPage(true, 3, 1)).toBe(false);
     expect(shouldClampAccountOverviewPage(false, 3, 1)).toBe(true);
     expect(shouldClampAccountOverviewPage(false, 3, 3)).toBe(false);
+    expect(
+      shouldClampAccountOverviewPage(false, 2, 1, {
+        requestedPage: 2,
+        responsePage: 1,
+        requestedPageSize: 12,
+        responsePageSize: 12,
+      })
+    ).toBe(false);
+    expect(
+      shouldClampAccountOverviewPage(false, 2, 1, {
+        requestedPage: 2,
+        responsePage: 2,
+        requestedPageSize: 12,
+        responsePageSize: 20,
+      })
+    ).toBe(false);
+    expect(
+      shouldClampAccountOverviewPage(false, 2, 1, {
+        requestedPage: 2,
+        responsePage: 2,
+        requestedPageSize: 12,
+        responsePageSize: 12,
+      })
+    ).toBe(true);
   });
 
   it('builds merged auth state for an account card', () => {

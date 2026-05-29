@@ -378,8 +378,28 @@ export const shouldResetAccountOverviewPage = (
 export const shouldClampAccountOverviewPage = (
   loading: boolean,
   currentPage: number,
-  nextPage: number
-) => !loading && currentPage !== nextPage;
+  nextPage: number,
+  response?: {
+    requestedPage: number;
+    responsePage: number;
+    requestedPageSize: number;
+    responsePageSize: number;
+  }
+) => {
+  if (loading || currentPage === nextPage) {
+    return false;
+  }
+
+  if (
+    response &&
+    (response.requestedPage !== response.responsePage ||
+      response.requestedPageSize !== response.responsePageSize)
+  ) {
+    return false;
+  }
+
+  return true;
+};
 
 const getAccountSortValue = (row: MonitoringAccountRow, key: AccountSortKey) => {
   switch (key) {

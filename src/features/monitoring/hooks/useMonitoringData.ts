@@ -448,6 +448,10 @@ export type MonitoringEventRow = {
   serverStreamSuccessCalls?: number;
   serverStreamFailureCalls?: number;
   serverStreamRecentPattern?: boolean[];
+  serverStreamRequestCount?: number;
+  serverStreamSuccessCallsToEvent?: number;
+  serverStreamFailureCallsToEvent?: number;
+  serverStreamRecentPatternToEvent?: boolean[];
   taskKey: string;
   searchText: string;
 };
@@ -1847,6 +1851,20 @@ const buildEventRows = (
       const serverStreamRecentPattern = Array.isArray(detail.__streamRecentPattern)
         ? detail.__streamRecentPattern.map((value) => value === true).slice(-10)
         : undefined;
+      const serverStreamRequestCount = Math.max(Number(detail.__streamRequestCount) || 0, 0);
+      const serverStreamSuccessCallsToEvent = Math.max(
+        Number(detail.__streamSuccessCountToEvent) || 0,
+        0
+      );
+      const serverStreamFailureCallsToEvent = Math.max(
+        Number(detail.__streamFailureCountToEvent) || 0,
+        0
+      );
+      const serverStreamRecentPatternToEvent = Array.isArray(
+        detail.__streamRecentPatternToEvent
+      )
+        ? detail.__streamRecentPatternToEvent.map((value) => value === true).slice(-10)
+        : undefined;
       const dayKey = buildLocalDayKey(timestampMs);
       const hourLabel = buildHourLabel(timestampMs);
       const sourceKey = sourceMeta.identityKey || `source:${sourceLabel}`;
@@ -1902,6 +1920,13 @@ const buildEventRows = (
         serverStreamFailureCalls:
           serverStreamTotalCalls > 0 ? serverStreamFailureCalls : undefined,
         serverStreamRecentPattern,
+        serverStreamRequestCount:
+          serverStreamRequestCount > 0 ? serverStreamRequestCount : undefined,
+        serverStreamSuccessCallsToEvent:
+          serverStreamRequestCount > 0 ? serverStreamSuccessCallsToEvent : undefined,
+        serverStreamFailureCallsToEvent:
+          serverStreamRequestCount > 0 ? serverStreamFailureCallsToEvent : undefined,
+        serverStreamRecentPatternToEvent,
         taskKey,
         searchText: buildSearchText(
           detail.__modelName,
@@ -2072,6 +2097,11 @@ const buildRealtimeRowsFromPageItems = (
     const streamRecentPattern = Array.isArray(rawStreamRecentPattern)
       ? rawStreamRecentPattern
       : undefined;
+    const rawStreamRecentPatternToEvent =
+      item.stream_recent_pattern_to_event ?? item.streamRecentPatternToEvent;
+    const streamRecentPatternToEvent = Array.isArray(rawStreamRecentPatternToEvent)
+      ? rawStreamRecentPatternToEvent
+      : undefined;
     return {
       timestamp: readString(item.timestamp),
       source: readString(item.source),
@@ -2110,6 +2140,18 @@ const buildRealtimeRowsFromPageItems = (
       __streamSuccessCount: readPageNumber(item, 'stream_success_count', 'streamSuccessCount'),
       __streamFailureCount: readPageNumber(item, 'stream_failure_count', 'streamFailureCount'),
       __streamRecentPattern: streamRecentPattern,
+      __streamRequestCount: readPageNumber(item, 'stream_request_count', 'streamRequestCount'),
+      __streamSuccessCountToEvent: readPageNumber(
+        item,
+        'stream_success_count_to_event',
+        'streamSuccessCountToEvent'
+      ),
+      __streamFailureCountToEvent: readPageNumber(
+        item,
+        'stream_failure_count_to_event',
+        'streamFailureCountToEvent'
+      ),
+      __streamRecentPatternToEvent: streamRecentPatternToEvent,
       __modelName: readString(item.model) || '-',
       __resolvedModel: readString(item.resolved_model ?? item.resolvedModel),
       __endpoint: endpoint,

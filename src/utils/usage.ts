@@ -51,6 +51,10 @@ export interface UsageDetail {
   __streamSuccessCount?: number;
   __streamFailureCount?: number;
   __streamRecentPattern?: unknown[];
+  __streamRequestCount?: number;
+  __streamSuccessCountToEvent?: number;
+  __streamFailureCountToEvent?: number;
+  __streamRecentPatternToEvent?: unknown[];
   __modelName?: string;
   __resolvedModel?: string;
   __timestampMs?: number;

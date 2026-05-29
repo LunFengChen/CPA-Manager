@@ -120,12 +120,16 @@ const createMonitoringEventRow = (
   serverStreamSuccessCalls: overrides.serverStreamSuccessCalls,
   serverStreamFailureCalls: overrides.serverStreamFailureCalls,
   serverStreamRecentPattern: overrides.serverStreamRecentPattern,
+  serverStreamRequestCount: overrides.serverStreamRequestCount,
+  serverStreamSuccessCallsToEvent: overrides.serverStreamSuccessCallsToEvent,
+  serverStreamFailureCallsToEvent: overrides.serverStreamFailureCallsToEvent,
+  serverStreamRecentPatternToEvent: overrides.serverStreamRecentPatternToEvent,
   taskKey: overrides.taskKey ?? 'task-1',
   searchText: overrides.searchText ?? 'alice codex gpt-4.1',
 });
 
 describe('MonitoringCenterPage account card', () => {
-  it('uses server realtime stream aggregates when page items are paginated', () => {
+  it('uses server realtime stream identities without duplicating final totals per row', () => {
     const rows = buildRealtimeLogRows([
       createMonitoringEventRow({
         serverStreamKey: 'alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1',
@@ -133,31 +137,57 @@ describe('MonitoringCenterPage account card', () => {
         serverStreamSuccessCalls: 35,
         serverStreamFailureCalls: 2,
         serverStreamRecentPattern: [true, true, false],
+        serverStreamRequestCount: 12,
+        serverStreamSuccessCallsToEvent: 11,
+        serverStreamFailureCallsToEvent: 1,
+        serverStreamRecentPatternToEvent: [true, false, true],
       }),
       createMonitoringEventRow({
         id: 'row-2',
         timestampMs: Date.parse('2026-05-09T01:12:44.000Z'),
+        serverStreamKey: 'alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1',
+        serverStreamTotalCalls: 37,
+        serverStreamSuccessCalls: 35,
+        serverStreamFailureCalls: 2,
+        serverStreamRecentPattern: [true, true, false],
+        serverStreamRequestCount: 13,
+        serverStreamSuccessCallsToEvent: 11,
+        serverStreamFailureCallsToEvent: 2,
+        serverStreamRecentPatternToEvent: [false, true, false],
+        failed: true,
+      }),
+      createMonitoringEventRow({
+        id: 'row-3',
+        timestampMs: Date.parse('2026-05-09T01:12:45.000Z'),
         serverStreamKey: 'alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-2',
         serverStreamTotalCalls: 1,
         serverStreamSuccessCalls: 0,
         serverStreamFailureCalls: 1,
         serverStreamRecentPattern: [false],
+        serverStreamRequestCount: 1,
+        serverStreamSuccessCallsToEvent: 0,
+        serverStreamFailureCallsToEvent: 1,
+        serverStreamRecentPatternToEvent: [false],
         failed: true,
       }),
     ]);
 
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     const rowsByStreamKey = new Map(rows.map((row) => [row.streamKey, row]));
-    const authOneRow = rowsByStreamKey.get(
-      'server:alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1'
-    );
+    const authOneRows = rows
+      .filter(
+        (row) => row.streamKey === 'server:alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-1'
+      )
+      .sort((left, right) => left.timestampMs - right.timestampMs);
     const authTwoRow = rowsByStreamKey.get(
       'server:alice@example.com\u0000codex\u0000gpt-4.1\u0000auth-2'
     );
 
-    expect(authOneRow?.requestCount).toBe(37);
-    expect(authOneRow?.successRate).toBeCloseTo(35 / 37);
-    expect(authOneRow?.recentPattern).toEqual([true, true, false]);
+    expect(authOneRows.map((row) => row.requestCount)).toEqual([12, 13]);
+    expect(authOneRows[0].successRate).toBeCloseTo(11 / 12);
+    expect(authOneRows[0].recentPattern).toEqual([true, false, true]);
+    expect(authOneRows[1].successRate).toBeCloseTo(11 / 13);
+    expect(authOneRows[1].recentPattern).toEqual([false, true, false]);
     expect(authTwoRow?.requestCount).toBe(1);
     expect(authTwoRow?.successRate).toBe(0);
     expect(authTwoRow?.recentPattern).toEqual([false]);
