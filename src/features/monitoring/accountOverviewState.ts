@@ -42,6 +42,7 @@ export type MonitoringPageSizes = {
 
 const MONITORING_TIME_RANGE_VALUES: readonly MonitoringTimeRange[] = [
   'today',
+  'yesterday',
   '7d',
   '14d',
   '30d',

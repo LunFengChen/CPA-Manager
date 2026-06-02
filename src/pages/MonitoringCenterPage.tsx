@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router-dom';
@@ -120,6 +121,7 @@ import styles from './MonitoringCenterPage.module.scss';
 
 const TIME_RANGE_OPTIONS: Array<{ value: MonitoringTimeRange; labelKey: string }> = [
   { value: 'today', labelKey: 'monitoring.range_today' },
+  { value: 'yesterday', labelKey: 'monitoring.range_yesterday' },
   { value: '7d', labelKey: 'monitoring.range_7d' },
   { value: '14d', labelKey: 'monitoring.range_14d' },
   { value: '30d', labelKey: 'monitoring.range_30d' },
@@ -2284,8 +2286,7 @@ export function MonitoringCenterPage() {
   );
 
   const syncPriceModels = useMemo(
-    () =>
-      buildModelPriceCandidateModels(filterFacets.models, filteredRows, modelPrices),
+    () => buildModelPriceCandidateModels(filterFacets.models, filteredRows, modelPrices),
     [filterFacets.models, filteredRows, modelPrices]
   );
 
@@ -2806,6 +2807,17 @@ export function MonitoringCenterPage() {
 
   const handleCustomDraftEndChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setCustomDraftEndInput(event.target.value);
+  }, []);
+
+  const openDateTimePicker = useCallback((event: MouseEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    input.focus();
+    try {
+      input.showPicker?.();
+    } catch {
+      // Some browsers only allow showPicker during trusted user gestures.
+      // Keeping focus preserves the native fallback behavior.
+    }
   }, []);
 
   const applyCustomTimeRange = useCallback(() => {
@@ -3860,11 +3872,6 @@ export function MonitoringCenterPage() {
         extra={
           <div className={styles.accountOverviewHeaderActions}>
             <div className={styles.accountOverviewToolbarRow}>
-              <div className={styles.inlineMetrics}>
-                <span>
-                  {t('monitoring.api_key_summary_keys_count', { count: apiKeyTotalCount })}
-                </span>
-              </div>
               <div className={styles.accountOverviewSortBar}>
                 <Select
                   className={styles.accountOverviewSortSelect}
@@ -3875,6 +3882,11 @@ export function MonitoringCenterPage() {
                   ariaLabel={t('monitoring.account_overview_sort_label')}
                   fullWidth={false}
                 />
+              </div>
+              <div className={styles.inlineMetrics}>
+                <span>
+                  {t('monitoring.api_key_summary_keys_count', { count: apiKeyTotalCount })}
+                </span>
               </div>
             </div>
           </div>
@@ -4176,6 +4188,7 @@ export function MonitoringCenterPage() {
               label={t('monitoring.custom_range_start')}
               value={customDraftStartInput}
               onChange={handleCustomDraftStartChange}
+              onClick={openDateTimePicker}
               className={styles.customRangeInput}
               aria-invalid={Boolean(customDraftTimeRangeError)}
             />
@@ -4184,6 +4197,7 @@ export function MonitoringCenterPage() {
               label={t('monitoring.custom_range_end')}
               value={customDraftEndInput}
               onChange={handleCustomDraftEndChange}
+              onClick={openDateTimePicker}
               className={styles.customRangeInput}
               aria-invalid={Boolean(customDraftTimeRangeError)}
             />

@@ -68,6 +68,8 @@ export const getRangeBounds = (
   switch (range) {
     case 'today':
       return { startMs: todayStart, endMs: nowMs };
+    case 'yesterday':
+      return { startMs: todayStart - 24 * 60 * 60 * 1000, endMs: todayStart };
     case '7d':
       return { startMs: todayStart - 6 * 24 * 60 * 60 * 1000, endMs: nowMs };
     case '14d':
@@ -85,6 +87,7 @@ const shouldUseHourlyTimeline = (
   customRange?: MonitoringCustomTimeRange | null
 ) =>
   range === 'today' ||
+  range === 'yesterday' ||
   (range === 'custom' &&
     isValidCustomTimeRange(customRange) &&
     buildLocalDayKey(customRange.startMs) === buildLocalDayKey(customRange.endMs));
@@ -291,7 +294,7 @@ type MonitoringAuthMeta = {
   updatedAt: string;
 };
 
-export type MonitoringTimeRange = 'today' | '7d' | '14d' | '30d' | 'all' | 'custom';
+export type MonitoringTimeRange = 'today' | 'yesterday' | '7d' | '14d' | '30d' | 'all' | 'custom';
 
 export type MonitoringCustomTimeRange = {
   startMs: number;
@@ -1860,9 +1863,7 @@ const buildEventRows = (
         Number(detail.__streamFailureCountToEvent) || 0,
         0
       );
-      const serverStreamRecentPatternToEvent = Array.isArray(
-        detail.__streamRecentPatternToEvent
-      )
+      const serverStreamRecentPatternToEvent = Array.isArray(detail.__streamRecentPatternToEvent)
         ? detail.__streamRecentPatternToEvent.map((value) => value === true).slice(-10)
         : undefined;
       const dayKey = buildLocalDayKey(timestampMs);
@@ -1915,10 +1916,8 @@ const buildEventRows = (
         totalCost,
         serverStreamKey: serverStreamTotalCalls > 0 ? serverStreamKey || undefined : undefined,
         serverStreamTotalCalls: serverStreamTotalCalls > 0 ? serverStreamTotalCalls : undefined,
-        serverStreamSuccessCalls:
-          serverStreamTotalCalls > 0 ? serverStreamSuccessCalls : undefined,
-        serverStreamFailureCalls:
-          serverStreamTotalCalls > 0 ? serverStreamFailureCalls : undefined,
+        serverStreamSuccessCalls: serverStreamTotalCalls > 0 ? serverStreamSuccessCalls : undefined,
+        serverStreamFailureCalls: serverStreamTotalCalls > 0 ? serverStreamFailureCalls : undefined,
         serverStreamRecentPattern,
         serverStreamRequestCount:
           serverStreamRequestCount > 0 ? serverStreamRequestCount : undefined,
@@ -2006,9 +2005,7 @@ const buildAccountRowsFromPageItems = (
     const latencySum = readPageNumber(item, 'latency_sum_ms', 'latencySumMs');
     const rawRecentPattern = item.recent_pattern ?? item.recentPattern;
     const recentPattern = Array.isArray(rawRecentPattern)
-      ? rawRecentPattern
-          .map((value: unknown) => value === true)
-          .filter((_, index) => index < 10)
+      ? rawRecentPattern.map((value: unknown) => value === true).filter((_, index) => index < 10)
       : [];
     return {
       id: account,
@@ -2132,11 +2129,7 @@ const buildRealtimeRowsFromPageItems = (
       success_count: item.failed === true ? 0 : 1,
       failure_count: item.failed === true ? 1 : 0,
       __streamKey: readString(item.stream_key ?? item.streamKey),
-      __streamTotalRequests: readPageNumber(
-        item,
-        'stream_total_requests',
-        'streamTotalRequests'
-      ),
+      __streamTotalRequests: readPageNumber(item, 'stream_total_requests', 'streamTotalRequests'),
       __streamSuccessCount: readPageNumber(item, 'stream_success_count', 'streamSuccessCount'),
       __streamFailureCount: readPageNumber(item, 'stream_failure_count', 'streamFailureCount'),
       __streamRecentPattern: streamRecentPattern,
