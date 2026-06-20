@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ReactElement, ReactNode } from 'react';
 import type { TFunction } from 'i18next';
+import { Button } from '@/components/ui/Button';
 import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { TYPE_COLORS } from '@/utils/quota';
 import styles from '@/pages/QuotaPage.module.scss';
@@ -65,7 +66,10 @@ interface QuotaCardProps<TState extends QuotaStatusState> {
   cardClassName: string;
   defaultType: string;
   canRefresh?: boolean;
+  canReset?: boolean;
+  resetting?: boolean;
   onRefresh?: () => void;
+  onReset?: () => void;
   renderQuotaItems: (quota: TState, t: TFunction, helpers: QuotaRenderHelpers) => ReactNode;
 }
 
@@ -78,7 +82,10 @@ export function QuotaCard<TState extends QuotaStatusState>({
   cardClassName,
   defaultType,
   canRefresh = false,
+  canReset = false,
+  resetting = false,
   onRefresh,
+  onReset,
   renderQuotaItems
 }: QuotaCardProps<TState>) {
   const { t } = useTranslation();
@@ -143,7 +150,23 @@ export function QuotaCard<TState extends QuotaStatusState>({
             })}
           </div>
         ) : quota ? (
-          renderQuotaItems(quota, t, { styles, QuotaProgressBar })
+          <>
+            {renderQuotaItems(quota, t, { styles, QuotaProgressBar })}
+            {onReset && (
+              <div className={styles.quotaCardActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={styles.quotaResetCreditButton}
+                  onClick={onReset}
+                  disabled={!canReset || resetting}
+                  loading={resetting}
+                >
+                  {t('codex_quota.reset_button')}
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className={styles.quotaMessage}>{t(idleMessageKey)}</div>
         )}

@@ -519,6 +519,7 @@
     "search_empty_desc": "請調整篩選條件或清空搜尋關鍵字再試一次。",
     "file_size": "大小",
     "file_modified": "修改時間",
+    "expires_label": "過期時間",
     "health_status_label": "健康狀態",
     "health_status_healthy": "健康",
     "health_status_warning": "警告",
@@ -747,7 +748,16 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "expires_label": "到期時間",
+    "reset_credits_label": "主動重置次數",
+    "reset_credits_count": "{{count}} 次",
+    "reset_button": "重置額度",
+    "reset_confirm_title": "重置 Codex 額度",
+    "reset_confirm_message": "將消耗 1 次主動重置次數來重置「{{name}}」的 Codex 額度。是否繼續？",
+    "reset_confirm_button": "確認重置",
+    "reset_success": "已重置「{{name}}」的 Codex 額度",
+    "reset_failed": "重置「{{name}}」的 Codex 額度失敗：{{message}}"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 配額",
@@ -1987,7 +1997,9 @@
     "sort_default": "預設順序",
     "sort_name_asc": "名稱 A-Z",
     "sort_plan_desc": "方案高到低",
-    "sort_plan_asc": "方案低到高"
+    "sort_plan_asc": "方案低到高",
+    "sort_expiry_asc": "到期時間早到晚",
+    "sort_expiry_desc": "到期時間晚到早"
   },
   "system_info": {
     "title": "管理中心資訊",

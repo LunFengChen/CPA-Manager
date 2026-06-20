@@ -121,7 +121,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
 }: QuotaSectionProps<TState, TData>) {
   const { t } = useTranslation();
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
-  const showNotification = useNotificationStore((state) => state.showNotification);
+  const { showConfirmation, showNotification } = useNotificationStore();
   const setQuota = useQuotaStore((state) => state[config.storeSetter]) as QuotaSetter<
     Record<string, TState>
   >;
@@ -130,6 +130,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   const [columns, gridRef] = useGridColumns(380); // Min card width 380px matches SCSS
   const [viewMode, setViewMode] = useState<ViewMode>('paged');
   const [showTooManyWarning, setShowTooManyWarning] = useState(false);
+  const [resettingQuota, setResettingQuota] = useState<Record<string, boolean>>({});
 
   const filteredFiles = useMemo(() => files.filter((file) => config.filterFn(file)), [
     files,
@@ -183,6 +184,27 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
           const rankDiff =
             sortMode === 'plan-desc' ? rightRank - leftRank : leftRank - rightRank;
           if (rankDiff !== 0) return rankDiff;
+        }
+
+        return compareFileName(left, right);
+      });
+    }
+
+    if (sortMode === 'expiry-asc' || sortMode === 'expiry-desc') {
+      sortedFiles.sort((left, right) => {
+        const leftTimestamp = config.getExpirySortValue?.(left, quota[left.name]);
+        const rightTimestamp = config.getExpirySortValue?.(right, quota[right.name]);
+        const leftKnown = leftTimestamp !== null && leftTimestamp !== undefined;
+        const rightKnown = rightTimestamp !== null && rightTimestamp !== undefined;
+
+        if (leftKnown || rightKnown) {
+          if (!leftKnown) return 1;
+          if (!rightKnown) return -1;
+          const timestampDiff =
+            sortMode === 'expiry-desc'
+              ? rightTimestamp - leftTimestamp
+              : leftTimestamp - rightTimestamp;
+          if (timestampDiff !== 0) return timestampDiff;
         }
 
         return compareFileName(left, right);
@@ -307,6 +329,43 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     [config, disabled, quota, setQuota, showNotification, t]
   );
 
+  const resetQuotaForFile = useCallback(
+    async (file: AuthFileItem) => {
+      if (disabled || file.disabled) return;
+      if (!config.resetQuota) return;
+      if (resettingQuota[file.name]) return;
+
+      showConfirmation({
+        title: t('codex_quota.reset_confirm_title'),
+        message: t('codex_quota.reset_confirm_message', { name: file.name }),
+        confirmText: t('codex_quota.reset_confirm_button'),
+        variant: 'danger',
+        onConfirm: async () => {
+          setResettingQuota((prev) => ({ ...prev, [file.name]: true }));
+          try {
+            const data = await config.resetQuota!(file, t);
+            setQuota((prev) => ({
+              ...prev,
+              [file.name]: config.buildSuccessState(data)
+            }));
+            showNotification(t('codex_quota.reset_success', { name: file.name }), 'success');
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : t('common.unknown_error');
+            const status = getStatusFromError(err);
+            setQuota((prev) => ({
+              ...prev,
+              [file.name]: config.buildErrorState(message, status)
+            }));
+            showNotification(t('codex_quota.reset_failed', { name: file.name, message }), 'error');
+          } finally {
+            setResettingQuota((prev) => ({ ...prev, [file.name]: false }));
+          }
+        }
+      });
+    },
+    [config, disabled, resettingQuota, setQuota, showConfirmation, showNotification, t]
+  );
+
   const titleNode = (
     <div className={styles.titleWrapper}>
       <span>{t(`${config.i18nPrefix}.title`)}</span>
@@ -393,7 +452,15 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                 cardClassName={config.cardClassName}
                 defaultType={config.type}
                 canRefresh={!disabled && !item.disabled}
+                canReset={
+                  Boolean(config.resetQuota) &&
+                  !disabled &&
+                  !item.disabled &&
+                  config.canResetQuota?.(quota[item.name]) === true
+                }
+                resetting={resettingQuota[item.name] === true}
                 onRefresh={() => void refreshQuotaForFile(item)}
+                onReset={config.resetQuota ? () => void resetQuotaForFile(item) : undefined}
                 renderQuotaItems={config.renderQuotaItems}
               />
             ))}

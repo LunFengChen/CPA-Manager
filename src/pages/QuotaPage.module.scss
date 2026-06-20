@@ -447,6 +447,16 @@
   padding: $spacing-xs $spacing-sm;
 }
 
+.quotaCardActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: $spacing-xs;
+}
+
+.quotaResetCreditButton {
+  min-height: 26px;
+}
+
 .codexPlan {
   display: flex;
   align-items: center;

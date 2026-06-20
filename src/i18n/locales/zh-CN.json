@@ -521,6 +521,7 @@
     "search_empty_desc": "请调整筛选条件或清空搜索关键字再试一次。",
     "file_size": "大小",
     "file_modified": "修改时间",
+    "expires_label": "过期时间",
     "health_status_label": "健康状态",
     "health_status_healthy": "健康",
     "health_status_warning": "警告",
@@ -580,6 +581,8 @@
     "sort_priority_asc": "优先级低到高",
     "sort_plan_desc": "套餐高到低",
     "sort_plan_asc": "套餐低到高",
+    "sort_expiry_asc": "到期时间早到晚",
+    "sort_expiry_desc": "到期时间晚到早",
     "priority_display": "优先级",
     "project_id_display": "项目 ID",
     "page_size_label": "单页数量",
@@ -749,7 +752,16 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "expires_label": "到期时间",
+    "reset_credits_label": "主动重置次数",
+    "reset_credits_count": "{{count}} 次",
+    "reset_button": "重置额度",
+    "reset_confirm_title": "重置 Codex 额度",
+    "reset_confirm_message": "将消耗 1 次主动重置次数来重置 \"{{name}}\" 的 Codex 额度。是否继续？",
+    "reset_confirm_button": "确认重置",
+    "reset_success": "已重置 \"{{name}}\" 的 Codex 额度",
+    "reset_failed": "重置 \"{{name}}\" 的 Codex 额度失败：{{message}}"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 额度",
@@ -1963,7 +1975,9 @@
     "sort_default": "默认顺序",
     "sort_name_asc": "名称 A-Z",
     "sort_plan_desc": "套餐高到低",
-    "sort_plan_asc": "套餐低到高"
+    "sort_plan_asc": "套餐低到高",
+    "sort_expiry_asc": "到期时间早到晚",
+    "sort_expiry_desc": "到期时间晚到早"
   },
   "system_info": {
     "title": "管理中心信息",

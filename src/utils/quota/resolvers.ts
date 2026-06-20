@@ -9,6 +9,17 @@ import {
   parseIdTokenPayload
 } from './parsers';
 
+const toRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+};
+
+const resolveNestedCodexAuthInfo = (value: unknown): Record<string, unknown> | null => {
+  const payload = parseIdTokenPayload(value);
+  if (!payload) return null;
+  return toRecord(payload['https://api.openai.com/auth']) ?? payload;
+};
+
 const resolveAccountIdCandidate = (value: unknown): string | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
@@ -26,12 +37,7 @@ export function extractCodexChatgptAccountId(value: unknown): string | null {
 
   const payload = parseIdTokenPayload(value);
   if (!payload) return null;
-  return normalizeStringValue(
-    payload.chatgpt_account_id ??
-      payload.chatgptAccountId ??
-      payload.account_id ??
-      payload.accountId
-  );
+  return resolveAccountIdCandidate(payload) ?? resolveAccountIdCandidate(payload['https://api.openai.com/auth']);
 }
 
 export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null {
@@ -58,13 +64,68 @@ export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null 
     attributes?.account_id,
     attributes?.accountId,
     file.id_token,
+    file.access_token,
     metadata?.id_token,
+    metadata?.access_token,
     attributes?.id_token,
+    attributes?.access_token,
   ];
 
   for (const candidate of candidates) {
     const id = extractCodexChatgptAccountId(candidate);
     if (id) return id;
+  }
+
+  return null;
+}
+
+const normalizeDateLikeValue = (value: unknown): string | number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const resolveSubscriptionActiveUntilCandidate = (value: unknown): string | number | null => {
+  const record = toRecord(value);
+  if (!record) return null;
+
+  const subscription = toRecord(record.subscription);
+  return normalizeDateLikeValue(
+    record.chatgpt_subscription_active_until ??
+      record.chatgptSubscriptionActiveUntil ??
+      record.subscription_active_until ??
+      record.subscriptionActiveUntil ??
+      subscription?.active_until ??
+      subscription?.activeUntil
+  );
+};
+
+export function resolveCodexSubscriptionActiveUntil(file: AuthFileItem): string | number | null {
+  const metadata = toRecord(file.metadata);
+  const attributes = toRecord(file.attributes);
+  const idToken = resolveNestedCodexAuthInfo(file.id_token);
+  const accessToken = resolveNestedCodexAuthInfo(file.access_token);
+  const metadataIdToken = resolveNestedCodexAuthInfo(metadata?.id_token);
+  const metadataAccessToken = resolveNestedCodexAuthInfo(metadata?.access_token);
+  const attributesIdToken = resolveNestedCodexAuthInfo(attributes?.id_token);
+  const attributesAccessToken = resolveNestedCodexAuthInfo(attributes?.access_token);
+
+  const candidates = [
+    file,
+    metadata,
+    attributes,
+    idToken,
+    accessToken,
+    metadataIdToken,
+    metadataAccessToken,
+    attributesIdToken,
+    attributesAccessToken
+  ];
+
+  for (const candidate of candidates) {
+    const activeUntil = resolveSubscriptionActiveUntilCandidate(candidate);
+    if (activeUntil !== null) return activeUntil;
   }
 
   return null;
@@ -79,16 +140,8 @@ export function resolveCodexPlanType(file: AuthFileItem): string | null {
     file && typeof file.attributes === 'object' && file.attributes !== null
       ? (file.attributes as Record<string, unknown>)
       : null;
-  const idToken =
-    file && typeof file.id_token === 'object' && file.id_token !== null
-      ? (file.id_token as Record<string, unknown>)
-      : null;
-  const metadataIdToken =
-    metadata && typeof metadata.id_token === 'object' && metadata.id_token !== null
-      ? (metadata.id_token as Record<string, unknown>)
-      : null;
   const resolveIdTokenPlanCandidate = (value: unknown): string | null => {
-    const payload = parseIdTokenPayload(value);
+    const payload = resolveNestedCodexAuthInfo(value);
     if (!payload) return null;
     return normalizePlanType(payload.plan_type ?? payload.planType);
   };
@@ -98,16 +151,15 @@ export function resolveCodexPlanType(file: AuthFileItem): string | null {
     file['plan_type'],
     file['planType'],
     resolveIdTokenPlanCandidate(file.id_token),
-    idToken?.plan_type,
-    idToken?.planType,
+    resolveIdTokenPlanCandidate(file.access_token),
     metadata?.plan_type,
     metadata?.planType,
     resolveIdTokenPlanCandidate(metadata?.id_token),
-    metadataIdToken?.plan_type,
-    metadataIdToken?.planType,
+    resolveIdTokenPlanCandidate(metadata?.access_token),
     attributes?.plan_type,
     attributes?.planType,
-    resolveIdTokenPlanCandidate(attributes?.id_token)
+    resolveIdTokenPlanCandidate(attributes?.id_token),
+    resolveIdTokenPlanCandidate(attributes?.access_token)
   ];
 
   for (const candidate of candidates) {

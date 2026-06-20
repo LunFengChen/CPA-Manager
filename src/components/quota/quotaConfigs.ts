@@ -30,6 +30,8 @@ import {
   fetchGeminiCliQuotaBuckets,
   fetchKimiQuota,
   fetchXaiQuota,
+  dateLikeToTimestamp,
+  formatDateTimeValue,
   formatQuotaResetTime,
   formatKimiResetHint,
   isAntigravityFile,
@@ -43,6 +45,8 @@ import {
   normalizePlanType,
   resolveCodexChatgptAccountId,
   resolveCodexPlanType,
+  resolveCodexSubscriptionActiveUntil,
+  resetCodexQuota,
 } from '@/utils/quota';
 import type { QuotaRenderHelpers } from './QuotaCard';
 import styles from '@/pages/QuotaPage.module.scss';
@@ -50,7 +54,13 @@ import styles from '@/pages/QuotaPage.module.scss';
 type QuotaUpdater<T> = T | ((prev: T) => T);
 
 export type QuotaType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi' | 'xai';
-export type QuotaSortMode = 'default' | 'name-asc' | 'plan-desc' | 'plan-asc';
+export type QuotaSortMode =
+  | 'default'
+  | 'name-asc'
+  | 'plan-desc'
+  | 'plan-asc'
+  | 'expiry-asc'
+  | 'expiry-desc';
 
 const QUOTA_PROGRESS_HIGH_THRESHOLD = 70;
 const QUOTA_PROGRESS_MEDIUM_THRESHOLD = 30;
@@ -98,6 +108,9 @@ export interface QuotaConfig<TState, TData> {
   gridClassName: string;
   getSearchText?: (file: AuthFileItem, quota: TState | undefined, t: TFunction) => unknown[];
   getPlanSortRank?: (file: AuthFileItem, quota: TState | undefined) => number | null;
+  getExpirySortValue?: (file: AuthFileItem, quota: TState | undefined) => number | null;
+  resetQuota?: (file: AuthFileItem, t: TFunction) => Promise<TData>;
+  canResetQuota?: (quota: TState | undefined) => boolean;
   renderQuotaItems: (quota: TState, t: TFunction, helpers: QuotaRenderHelpers) => ReactNode;
 }
 
@@ -270,6 +283,9 @@ const getCodexPlanSortRank = (file: AuthFileItem, quota?: CodexQuotaState): numb
   return 0;
 };
 
+const getCodexExpirySortValue = (file: AuthFileItem, quota?: CodexQuotaState): number | null =>
+  dateLikeToTimestamp(quota?.subscriptionActiveUntil ?? resolveCodexSubscriptionActiveUntil(file));
+
 const getCodexSearchText = (
   file: AuthFileItem,
   quota: CodexQuotaState | undefined,
@@ -291,6 +307,8 @@ const renderCodexItems = (
   const windows = quota.windows ?? [];
   const planType = quota.planType ?? null;
   const planLabel = getCodexPlanLabel(planType, t);
+  const subscriptionActiveUntil = quota.subscriptionActiveUntil ?? null;
+  const resetCreditsCount = quota.rateLimitResetCreditsAvailableCount ?? null;
   const isPremiumPlan = PREMIUM_CODEX_PLAN_TYPES.has(normalizePlanType(planType) ?? '');
   const nodes: ReactNode[] = [];
 
@@ -302,6 +320,32 @@ const renderCodexItems = (
         { key: 'plan', className: styleMap.codexPlan },
         h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.plan_label')),
         h('span', { className: valueClass }, planLabel)
+      )
+    );
+  }
+
+  if (subscriptionActiveUntil) {
+    nodes.push(
+      h(
+        'div',
+        { key: 'subscription-active-until', className: styleMap.codexPlan },
+        h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.expires_label')),
+        h('span', { className: styleMap.codexPlanValue }, formatDateTimeValue(subscriptionActiveUntil))
+      )
+    );
+  }
+
+  if (resetCreditsCount !== null) {
+    nodes.push(
+      h(
+        'div',
+        { key: 'reset-credits', className: styleMap.codexPlan },
+        h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.reset_credits_label')),
+        h(
+          'span',
+          { className: styleMap.codexPlanValue },
+          t('codex_quota.reset_credits_count', { count: resetCreditsCount })
+        )
       )
     );
   }
@@ -580,7 +624,12 @@ export const ANTIGRAVITY_CONFIG: QuotaConfig<AntigravityQuotaState, AntigravityQ
 
 export const CODEX_CONFIG: QuotaConfig<
   CodexQuotaState,
-  { planType: string | null; windows: CodexQuotaWindow[] }
+  {
+    planType: string | null;
+    subscriptionActiveUntil: string | number | null;
+    rateLimitResetCreditsAvailableCount: number | null;
+    windows: CodexQuotaWindow[];
+  }
 > = {
   type: 'codex',
   i18nPrefix: 'codex_quota',
@@ -594,6 +643,8 @@ export const CODEX_CONFIG: QuotaConfig<
     status: 'success',
     windows: data.windows,
     planType: data.planType,
+    subscriptionActiveUntil: data.subscriptionActiveUntil,
+    rateLimitResetCreditsAvailableCount: data.rateLimitResetCreditsAvailableCount,
   }),
   buildErrorState: (message, status) => ({
     status: 'error',
@@ -607,6 +658,9 @@ export const CODEX_CONFIG: QuotaConfig<
   gridClassName: styles.codexGrid,
   getSearchText: getCodexSearchText,
   getPlanSortRank: getCodexPlanSortRank,
+  getExpirySortValue: getCodexExpirySortValue,
+  resetQuota: resetCodexQuota,
+  canResetQuota: (quota) => (quota?.rateLimitResetCreditsAvailableCount ?? 0) > 0,
   renderQuotaItems: renderCodexItems,
 };
 

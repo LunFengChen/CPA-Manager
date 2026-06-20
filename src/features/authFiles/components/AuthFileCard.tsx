@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { AuthFileItem } from '@/types';
-import { resolveAuthProvider } from '@/utils/quota';
+import { formatDateTimeValue, resolveAuthProvider } from '@/utils/quota';
 import {
   normalizeRecentRequestAuthIndex,
   normalizeRecentRequestBuckets,
@@ -59,6 +59,18 @@ const resolveQuotaType = (file: AuthFileItem): QuotaProviderType | null => {
   const provider = resolveAuthProvider(file);
   if (!QUOTA_PROVIDER_TYPES.has(provider as QuotaProviderType)) return null;
   return provider as QuotaProviderType;
+};
+
+const resolveAuthFileExpiry = (file: AuthFileItem): string | number | null => {
+  const raw =
+    file.expired ??
+    file.expires_at ??
+    file.expiresAt ??
+    file.expiration ??
+    file.expired_at ??
+    file.expiredAt;
+  if (typeof raw === 'string' || typeof raw === 'number') return raw;
+  return null;
 };
 
 export function AuthFileCard(props: AuthFileCardProps) {
@@ -129,6 +141,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
     return raw.trim();
   })();
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
+  const expiryValue = resolveAuthFileExpiry(file);
+  const expiryLabel = expiryValue !== null ? formatDateTimeValue(expiryValue) : '';
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled
@@ -201,6 +215,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
               <span className={styles.metaLabel}>{t('auth_files.file_modified')}</span>
               <span className={styles.metaValue}>{formatModified(file)}</span>
             </div>
+            {expiryLabel && expiryLabel !== '-' && (
+              <div className={styles.metaItem}>
+                <span className={styles.metaLabel}>{t('auth_files.expires_label')}</span>
+                <span className={styles.metaValue}>{expiryLabel}</span>
+              </div>
+            )}
             {priorityValue !== undefined && (
               <div className={`${styles.metaItem} ${styles.priorityBadge}`}>
                 <span className={styles.metaLabel}>{t('auth_files.priority_display')}</span>

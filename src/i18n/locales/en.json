@@ -521,6 +521,7 @@
     "search_empty_desc": "Try changing the filters or clearing the search box.",
     "file_size": "Size",
     "file_modified": "Modified",
+    "expires_label": "Expires",
     "health_status_label": "Health",
     "health_status_healthy": "Healthy",
     "health_status_warning": "Warning",
@@ -580,6 +581,8 @@
     "sort_priority_asc": "Priority low to high",
     "sort_plan_desc": "Plan high to low",
     "sort_plan_asc": "Plan low to high",
+    "sort_expiry_asc": "Expiry soonest first",
+    "sort_expiry_desc": "Expiry latest first",
     "priority_display": "Priority",
     "project_id_display": "Project ID",
     "page_size_label": "Per page",
@@ -749,7 +752,16 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "expires_label": "Expires",
+    "reset_credits_label": "Manual reset credits",
+    "reset_credits_count": "{{count}}",
+    "reset_button": "Reset quota",
+    "reset_confirm_title": "Reset Codex quota",
+    "reset_confirm_message": "This will consume 1 manual reset credit to reset Codex quota for \"{{name}}\". Continue?",
+    "reset_confirm_button": "Confirm reset",
+    "reset_success": "Reset Codex quota for \"{{name}}\"",
+    "reset_failed": "Failed to reset Codex quota for \"{{name}}\": {{message}}"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI Quota",
@@ -1963,7 +1975,9 @@
     "sort_default": "Default order",
     "sort_name_asc": "Name A-Z",
     "sort_plan_desc": "Plan high to low",
-    "sort_plan_asc": "Plan low to high"
+    "sort_plan_asc": "Plan low to high",
+    "sort_expiry_asc": "Expiry soonest first",
+    "sort_expiry_desc": "Expiry latest first"
   },
   "system_info": {
     "title": "Management Center Info",

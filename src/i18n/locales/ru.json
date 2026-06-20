@@ -519,6 +519,7 @@
     "search_empty_desc": "Попробуйте изменить фильтры или очистить строку поиска.",
     "file_size": "Размер",
     "file_modified": "Изменён",
+    "expires_label": "Истекает",
     "health_status_label": "Состояние",
     "health_status_healthy": "Нормально",
     "health_status_warning": "Предупреждение",
@@ -744,7 +745,16 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "expires_label": "Истекает",
+    "reset_credits_label": "Кредиты ручного сброса",
+    "reset_credits_count": "{{count}}",
+    "reset_button": "Сбросить квоту",
+    "reset_confirm_title": "Сбросить квоту Codex",
+    "reset_confirm_message": "Будет использован 1 кредит ручного сброса для \"{{name}}\". Продолжить?",
+    "reset_confirm_button": "Подтвердить сброс",
+    "reset_success": "Квота Codex для \"{{name}}\" сброшена",
+    "reset_failed": "Не удалось сбросить квоту Codex для \"{{name}}\": {{message}}"
   },
   "gemini_cli_quota": {
     "title": "Квота Gemini CLI",
@@ -1958,7 +1968,9 @@
     "sort_default": "По умолчанию",
     "sort_name_asc": "Имя A-Z",
     "sort_plan_desc": "План от высокого",
-    "sort_plan_asc": "План от низкого"
+    "sort_plan_asc": "План от низкого",
+    "sort_expiry_asc": "Срок: сначала ближайшие",
+    "sort_expiry_desc": "Срок: сначала поздние"
   },
   "system_info": {
     "title": "Информация о центре управления",
