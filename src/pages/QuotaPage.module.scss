@@ -457,6 +457,13 @@
   min-height: 26px;
 }
 
+.codexSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
 .codexPlan {
   display: flex;
   align-items: center;

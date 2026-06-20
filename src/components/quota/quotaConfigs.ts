@@ -311,10 +311,11 @@ const renderCodexItems = (
   const resetCreditsCount = quota.rateLimitResetCreditsAvailableCount ?? null;
   const isPremiumPlan = PREMIUM_CODEX_PLAN_TYPES.has(normalizePlanType(planType) ?? '');
   const nodes: ReactNode[] = [];
+  const summaryNodes: ReactNode[] = [];
 
   if (planLabel) {
     const valueClass = isPremiumPlan ? styleMap.premiumPlanValue : styleMap.codexPlanValue;
-    nodes.push(
+    summaryNodes.push(
       h(
         'div',
         { key: 'plan', className: styleMap.codexPlan },
@@ -325,7 +326,7 @@ const renderCodexItems = (
   }
 
   if (subscriptionActiveUntil) {
-    nodes.push(
+    summaryNodes.push(
       h(
         'div',
         { key: 'subscription-active-until', className: styleMap.codexPlan },
@@ -336,7 +337,7 @@ const renderCodexItems = (
   }
 
   if (resetCreditsCount !== null) {
-    nodes.push(
+    summaryNodes.push(
       h(
         'div',
         { key: 'reset-credits', className: styleMap.codexPlan },
@@ -348,6 +349,10 @@ const renderCodexItems = (
         )
       )
     );
+  }
+
+  if (summaryNodes.length > 0) {
+    nodes.push(h('div', { key: 'codex-summary', className: styleMap.codexSummary }, ...summaryNodes));
   }
 
   if (windows.length === 0) {
