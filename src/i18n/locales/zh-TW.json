@@ -145,7 +145,8 @@
     "monitoring_center": "請求監控",
     "config_management": "設定面板",
     "logs": "記錄檢視",
-    "system_info": "中心資訊"
+    "system_info": "中心資訊",
+    "proxy_pool": "代理池"
   },
   "dashboard": {
     "title": "儀表板",

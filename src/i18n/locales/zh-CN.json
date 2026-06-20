@@ -147,7 +147,8 @@
     "monitoring_center": "请求监控",
     "config_management": "配置面板",
     "logs": "日志查看",
-    "system_info": "中心信息"
+    "system_info": "中心信息",
+    "proxy_pool": "代理池"
   },
   "dashboard": {
     "title": "仪表盘",

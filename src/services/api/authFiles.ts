@@ -44,6 +44,14 @@ type AuthFileBatchDeleteResult = {
   files: string[];
   failed: AuthFileBatchFailure[];
 };
+export type AuthFileNormalizeNamesResult = {
+  total: number;
+  renamed: number;
+  skipped: number;
+  failed: number;
+  files?: Array<{ old: string; new: string }>;
+  errors?: Array<{ name: string; message: string }>;
+};
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
@@ -472,6 +480,9 @@ export const authFilesApi = {
   },
 
   deleteAll: () => apiClient.delete('/auth-files', { params: { all: true } }),
+
+  normalizeNames: () =>
+    apiClient.post<AuthFileNormalizeNamesResult>('/auth-files/normalize-names', {}),
 
   downloadText: async (name: string): Promise<string> => {
     const response = await apiClient.getRaw(

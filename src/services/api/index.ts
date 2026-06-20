@@ -8,6 +8,7 @@ export * from './ampcode';
 export * from './providers';
 export * from './authFiles';
 export * from './oauth';
+export * from './proxies';
 export * from './logs';
 export * from './usageService';
 export * from './version';

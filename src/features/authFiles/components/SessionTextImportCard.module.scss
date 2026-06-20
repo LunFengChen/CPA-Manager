@@ -1,0 +1,105 @@
+@use '@/styles/mixins' as *;
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  :global(.form-group) {
+    margin-bottom: 0;
+  }
+}
+
+.cardHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.formItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  label {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.12);
+  }
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.resultBox {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-secondary);
+}
+
+.resultTitle {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.keyValueItem {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: $spacing-sm;
+  align-items: start;
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+.errorList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: $error-color;
+  font-size: 13px;
+}

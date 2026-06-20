@@ -25,6 +25,7 @@ import { IconFilterAll, IconSearch } from '@/components/ui/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
+import { getErrorMessage } from '@/utils/helpers';
 import {
   normalizePlanType,
   resolveAuthProvider,
@@ -53,6 +54,7 @@ import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileMod
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
+import { SessionTextImportCard } from '@/features/authFiles/components/SessionTextImportCard';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
@@ -69,6 +71,7 @@ import {
   type AuthFilesViewMode,
 } from '@/features/authFiles/uiState';
 import type { AuthJsonInputType } from '@/features/authFiles/sessionAuthConverter';
+import { authFilesApi } from '@/services/api';
 import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import styles from './AuthFilesPage.module.scss';
 
@@ -243,6 +246,7 @@ export function AuthFilesPage() {
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
   const [authJsonPasteOpen, setAuthJsonPasteOpen] = useState(false);
+  const [normalizingNames, setNormalizingNames] = useState(false);
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
@@ -489,6 +493,27 @@ export function AuthFilesPage() {
   const handleHeaderRefresh = useCallback(async () => {
     await Promise.all([loadFiles(), loadExcluded(), loadModelAlias()]);
   }, [loadFiles, loadExcluded, loadModelAlias]);
+
+  const handleNormalizeNames = useCallback(async () => {
+    setNormalizingNames(true);
+    try {
+      const result = await authFilesApi.normalizeNames();
+      showNotification(
+        t('auth_files.normalize_names_result', {
+          defaultValue: 'File names normalized: {{renamed}} renamed, {{skipped}} skipped, {{failed}} failed',
+          renamed: result.renamed ?? 0,
+          skipped: result.skipped ?? 0,
+          failed: result.failed ?? 0,
+        }),
+        result.failed ? 'warning' : 'success'
+      );
+      await loadFiles();
+    } catch (error) {
+      showNotification(getErrorMessage(error, t('auth_files.normalize_names_failed', { defaultValue: 'Failed to normalize file names' })), 'error');
+    } finally {
+      setNormalizingNames(false);
+    }
+  }, [loadFiles, showNotification, t]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
@@ -850,6 +875,8 @@ export function AuthFilesPage() {
         <p className={styles.description}>{t('auth_files.description')}</p>
       </div>
 
+      <SessionTextImportCard disabled={disableControls} onImported={loadFiles} />
+
       <section className={styles.authFilesShell}>
         <div className={styles.authFilesHeader}>
           <div className={styles.authFilesTitle}>{titleNode}</div>
@@ -865,6 +892,15 @@ export function AuthFilesPage() {
               loading={authJsonPasteSaving}
             >
               {t('auth_files.paste_button')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleNormalizeNames}
+              disabled={disableControls || loading || normalizingNames}
+              loading={normalizingNames}
+            >
+              {t('auth_files.normalize_names_button', { defaultValue: '规范化文件名' })}
             </Button>
             <Button
               size="sm"
