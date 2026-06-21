@@ -281,33 +281,23 @@
 
 // 卡片渐变背景 — 基于 TYPE_COLORS light.bg 转 rgba
 .claudeCard {
-  background-image: linear-gradient(180deg,
-      rgba(251, 236, 228, 0.18),
-      rgba(251, 236, 228, 0));
+  background-image: linear-gradient(180deg, rgba(251, 236, 228, 0.18), rgba(251, 236, 228, 0));
 }
 
 .antigravityCard {
-  background-image: linear-gradient(180deg,
-      rgba(224, 247, 250, 0.12),
-      rgba(224, 247, 250, 0));
+  background-image: linear-gradient(180deg, rgba(224, 247, 250, 0.12), rgba(224, 247, 250, 0));
 }
 
 .codexCard {
-  background-image: linear-gradient(180deg,
-      rgba(234, 231, 255, 0.18),
-      rgba(234, 231, 255, 0));
+  background-image: linear-gradient(180deg, rgba(234, 231, 255, 0.18), rgba(234, 231, 255, 0));
 }
 
 .geminiCliCard {
-  background-image: linear-gradient(180deg,
-      rgba(224, 232, 255, 0.2),
-      rgba(224, 232, 255, 0));
+  background-image: linear-gradient(180deg, rgba(224, 232, 255, 0.2), rgba(224, 232, 255, 0));
 }
 
 .kimiCard {
-  background-image: linear-gradient(180deg,
-      rgba(220, 232, 255, 0.2),
-      rgba(220, 232, 255, 0));
+  background-image: linear-gradient(180deg, rgba(220, 232, 255, 0.2), rgba(220, 232, 255, 0));
 }
 
 .quotaSection {
@@ -480,6 +470,37 @@
   font-weight: 600;
   color: var(--text-primary);
   text-transform: capitalize;
+}
+
+.codexUsageSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+}
+
+.codexUsageMetric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background-color: rgba($primary-color, 0.05);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.codexUsageMetricLabel {
+  color: var(--text-tertiary);
+}
+
+.codexUsageMetricValue {
+  color: var(--text-primary);
+  font-weight: 650;
+  text-transform: none;
 }
 
 .premiumPlanValue {
@@ -692,7 +713,10 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+  transition:
+    transform $transition-fast,
+    box-shadow $transition-fast,
+    border-color $transition-fast;
 
   &:hover {
     transform: translateY(-2px);

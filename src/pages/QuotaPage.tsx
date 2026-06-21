@@ -18,9 +18,10 @@ import {
   CODEX_CONFIG,
   GEMINI_CLI_CONFIG,
   KIMI_CONFIG,
-  XAI_CONFIG
+  XAI_CONFIG,
 } from '@/components/quota';
 import type { QuotaSortMode } from '@/components/quota/quotaConfigs';
+import { useQuotaUsageSummaries } from '@/components/quota/useQuotaUsageSummaries';
 import type { AuthFileItem } from '@/types';
 import styles from './QuotaPage.module.scss';
 
@@ -32,10 +33,7 @@ export function QuotaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useLocalStorage<QuotaSortMode>(
-    'quotaPage.sortMode',
-    'default'
-  );
+  const [sortMode, setSortMode] = useLocalStorage<QuotaSortMode>('quotaPage.sortMode', 'default');
 
   const disableControls = connectionStatus !== 'connected';
   const sortOptions = useMemo(
@@ -45,7 +43,7 @@ export function QuotaPage() {
       { value: 'plan-desc', label: t('quota_management.sort_plan_desc') },
       { value: 'plan-asc', label: t('quota_management.sort_plan_asc') },
       { value: 'expiry-asc', label: t('quota_management.sort_expiry_asc') },
-      { value: 'expiry-desc', label: t('quota_management.sort_expiry_desc') }
+      { value: 'expiry-desc', label: t('quota_management.sort_expiry_desc') },
     ],
     [t]
   );
@@ -73,9 +71,12 @@ export function QuotaPage() {
     }
   }, [t]);
 
+  const { summaries: quotaUsageSummaries, refresh: refreshQuotaUsageSummaries } =
+    useQuotaUsageSummaries(files);
+
   const handleHeaderRefresh = useCallback(async () => {
-    await Promise.all([loadConfig(), loadFiles()]);
-  }, [loadConfig, loadFiles]);
+    await Promise.all([loadConfig(), loadFiles(), refreshQuotaUsageSummaries()]);
+  }, [loadConfig, loadFiles, refreshQuotaUsageSummaries]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
@@ -126,6 +127,7 @@ export function QuotaPage() {
         disabled={disableControls}
         searchQuery={searchQuery}
         sortMode={sortMode}
+        usageSummaries={quotaUsageSummaries}
       />
       <QuotaSection
         config={CLAUDE_CONFIG}

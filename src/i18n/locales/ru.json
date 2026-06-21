@@ -754,7 +754,10 @@
     "reset_confirm_message": "Будет использован 1 кредит ручного сброса для \"{{name}}\". Продолжить?",
     "reset_confirm_button": "Подтвердить сброс",
     "reset_success": "Квота Codex для \"{{name}}\" сброшена",
-    "reset_failed": "Не удалось сбросить квоту Codex для \"{{name}}\": {{message}}"
+    "reset_failed": "Не удалось сбросить квоту Codex для \"{{name}}\": {{message}}",
+    "usage_requests_label": "#",
+    "usage_cost_label": "$",
+    "usage_tokens_label": "Tok"
   },
   "gemini_cli_quota": {
     "title": "Квота Gemini CLI",

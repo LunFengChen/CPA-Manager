@@ -48,6 +48,7 @@ import {
   resolveCodexSubscriptionActiveUntil,
   resetCodexQuota,
 } from '@/utils/quota';
+import { formatCompactNumber, formatUsd } from '@/utils/usage';
 import type { QuotaRenderHelpers } from './QuotaCard';
 import styles from '@/pages/QuotaPage.module.scss';
 
@@ -297,12 +298,59 @@ const getCodexSearchText = (
   return [planType, planLabel, accountId];
 };
 
+const renderCodexUsageMetric = (
+  key: string,
+  label: string,
+  value: string,
+  styleMap: QuotaRenderHelpers['styles']
+): ReactNode => {
+  const { createElement: h } = React;
+  return h(
+    'span',
+    { key, className: styleMap.codexUsageMetric },
+    h('span', { className: styleMap.codexUsageMetricLabel }, label),
+    h('span', { className: styleMap.codexUsageMetricValue }, value)
+  );
+};
+
+const renderCodexUsageSummary = (
+  usage: NonNullable<QuotaRenderHelpers['usageSummary']>,
+  t: TFunction,
+  styleMap: QuotaRenderHelpers['styles']
+): ReactNode[] => {
+  const costLabel =
+    usage.hasCostEstimate && usage.totalCost !== null
+      ? formatUsd(usage.totalCost).replace(/^\$/, '')
+      : '--';
+
+  return [
+    renderCodexUsageMetric(
+      'usage-requests',
+      t('codex_quota.usage_requests_label'),
+      formatCompactNumber(usage.requestCount),
+      styleMap
+    ),
+    renderCodexUsageMetric(
+      'usage-cost',
+      t('codex_quota.usage_cost_label'),
+      costLabel,
+      styleMap
+    ),
+    renderCodexUsageMetric(
+      'usage-tokens',
+      t('codex_quota.usage_tokens_label'),
+      formatCompactNumber(usage.totalTokens),
+      styleMap
+    ),
+  ];
+};
+
 const renderCodexItems = (
   quota: CodexQuotaState,
   t: TFunction,
   helpers: QuotaRenderHelpers
 ): ReactNode => {
-  const { styles: styleMap, QuotaProgressBar } = helpers;
+  const { styles: styleMap, QuotaProgressBar, usageSummary } = helpers;
   const { createElement: h, Fragment } = React;
   const windows = quota.windows ?? [];
   const planType = quota.planType ?? null;
@@ -331,7 +379,11 @@ const renderCodexItems = (
         'div',
         { key: 'subscription-active-until', className: styleMap.codexPlan },
         h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.expires_label')),
-        h('span', { className: styleMap.codexPlanValue }, formatDateTimeValue(subscriptionActiveUntil))
+        h(
+          'span',
+          { className: styleMap.codexPlanValue },
+          formatDateTimeValue(subscriptionActiveUntil)
+        )
       )
     );
   }
@@ -351,8 +403,24 @@ const renderCodexItems = (
     );
   }
 
+  const visibleUsageSummary = usageSummary ?? {
+    requestCount: 0,
+    totalTokens: 0,
+    totalCost: null,
+    hasCostEstimate: false,
+  };
+  summaryNodes.push(
+    h(
+      'div',
+      { key: 'usage-summary', className: styleMap.codexUsageSummary },
+      ...renderCodexUsageSummary(visibleUsageSummary, t, styleMap)
+    )
+  );
+
   if (summaryNodes.length > 0) {
-    nodes.push(h('div', { key: 'codex-summary', className: styleMap.codexSummary }, ...summaryNodes));
+    nodes.push(
+      h('div', { key: 'codex-summary', className: styleMap.codexSummary }, ...summaryNodes)
+    );
   }
 
   if (windows.length === 0) {

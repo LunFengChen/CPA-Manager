@@ -761,7 +761,10 @@
     "reset_confirm_message": "This will consume 1 manual reset credit to reset Codex quota for \"{{name}}\". Continue?",
     "reset_confirm_button": "Confirm reset",
     "reset_success": "Reset Codex quota for \"{{name}}\"",
-    "reset_failed": "Failed to reset Codex quota for \"{{name}}\": {{message}}"
+    "reset_failed": "Failed to reset Codex quota for \"{{name}}\": {{message}}",
+    "usage_requests_label": "#",
+    "usage_cost_label": "$",
+    "usage_tokens_label": "Tok"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI Quota",

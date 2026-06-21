@@ -761,7 +761,10 @@
     "reset_confirm_message": "将消耗 1 次主动重置次数来重置 \"{{name}}\" 的 Codex 额度。是否继续？",
     "reset_confirm_button": "确认重置",
     "reset_success": "已重置 \"{{name}}\" 的 Codex 额度",
-    "reset_failed": "重置 \"{{name}}\" 的 Codex 额度失败：{{message}}"
+    "reset_failed": "重置 \"{{name}}\" 的 Codex 额度失败：{{message}}",
+    "usage_requests_label": "#",
+    "usage_cost_label": "$",
+    "usage_tokens_label": "Tok"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 额度",
